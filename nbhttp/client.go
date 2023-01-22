@@ -77,6 +77,7 @@ func (hcs *hostConns) getConn() (*hostConns, *ClientConn, error) {
 				Proxy:           c.Proxy,
 				CheckRedirect:   c.CheckRedirect,
 			}
+			hc.Processor = NewClientProcessor(hc, hc.onResponse)
 			hcs.mux.Lock()
 			hcs.conns[hc] = struct{}{}
 			hcs.mux.Unlock()
@@ -166,6 +167,10 @@ func (c *Client) getConn(host string) (*hostConns, *ClientConn, error) {
 
 // Do .
 func (c *Client) Do(req *http.Request, handler func(res *http.Response, conn net.Conn, err error)) {
+	c.DoWithConnHandler(req, nil, handler)
+}
+
+func (c *Client) DoWithConnHandler(req *http.Request, connHandler func(*ClientConn), handler func(res *http.Response, conn net.Conn, err error)) {
 	c.Engine.ExecuteClient(func() {
 		host := req.URL.Host
 		hcs, hc, err := c.getConn(host)
@@ -174,6 +179,11 @@ func (c *Client) Do(req *http.Request, handler func(res *http.Response, conn net
 			return
 		}
 		hc.Reset()
+
+		if connHandler != nil {
+			connHandler(hc)
+		}
+
 		hc.Do(req, func(res *http.Response, conn net.Conn, err error) {
 			hcs.releaseConn(hc)
 			handler(res, conn, err)

@@ -46,6 +46,8 @@ type ClientConn struct {
 	Proxy func(*http.Request) (*url.URL, error)
 
 	CheckRedirect func(req *http.Request, via []*http.Request) error
+
+	Processor
 }
 
 // Reset .
@@ -245,8 +247,7 @@ func (c *ClientConn) Do(req *http.Request, handler func(res *http.Response, conn
 			}
 
 			c.conn = nbc
-			processor := NewClientProcessor(c, c.onResponse)
-			parser := NewParser(processor, true, engine.ReadLimit, nbc.Execute)
+			parser := NewParser(c.Processor, true, engine.ReadLimit, nbc.Execute)
 			parser.Conn = nbc
 			parser.Engine = engine
 			parser.OnClose(func(p *Parser, err error) {
@@ -287,8 +288,7 @@ func (c *ClientConn) Do(req *http.Request, handler func(res *http.Response, conn
 			tlsConn.ResetConn(nbc, isNonblock)
 
 			c.conn = tlsConn
-			processor := NewClientProcessor(c, c.onResponse)
-			parser := NewParser(processor, true, engine.ReadLimit, nbc.Execute)
+			parser := NewParser(c.Processor, true, engine.ReadLimit, nbc.Execute)
 			parser.Conn = tlsConn
 			parser.Engine = engine
 			parser.OnClose(func(p *Parser, err error) {
